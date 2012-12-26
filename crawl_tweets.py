@@ -41,13 +41,14 @@ def user_tweets(name, n):
             tweet['name'] = name
             tweet['id'] = str(entity.id)
             tweet['ptime'] = entity.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            if 'url' in entity.entities['urls']:
-                tweet['text'] = entity.text.replace(entity.entities['urls'][0]['url'], entity.entities['urls'][0]['expanded_url']).encode('utf-8')
+            tweet['text'] = entity.text.encode('utf-8')
+            if entity.entities['urls']:
+                tweet['text'] = tweet['text'].replace(entity.entities['urls'][0]['url'], entity.entities['urls'][0]['expanded_url']).encode('utf-8')
             if 'media' in entity.entities:
                 if entity.entities['media'][0]['type'] == 'photo':
                     tweet['img'] = urllib2.urlopen(entity.entities['media'][0]['media_url']).read()
                     if 'url' in entity.entities['media'][0]:
-                        tweet['text'] = entity.text.replace(entity.entities['media'][0]['url'], entity.entities['media'][0]['expanded_url']).encode('utf-8')
+                        tweet['text'] = tweet['text'].replace(entity.entities['media'][0]['url'], entity.entities['media'][0]['expanded_url']).encode('utf-8')
             else:
                 tweet['img'] = ''
             tweet['src'] = 'twitter'
