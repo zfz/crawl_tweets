@@ -30,7 +30,10 @@ def check_new(last, name):
 def user_tweets(name, n):
 # Fetch tweets of the specified user.
     tweets = []
-    user = tweepy.api.get_user(name)
+    try:
+        user = tweepy.api.get_user(name)
+    except:
+        print 'Fail to identify the user %s!' % name
     try:
         for entity in user.timeline(count=n, include_entities=True):
             tweet = {}
@@ -38,10 +41,13 @@ def user_tweets(name, n):
             tweet['name'] = name
             tweet['id'] = str(entity.id)
             tweet['ptime'] = entity.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            tweet['text'] = entity.text.encode('utf-8')
+            if 'url' in entity.entities['urls']:
+                tweet['text'] = entity.text.replace(entity.entities['urls'][0]['url'], entity.entities['urls'][0]['expanded_url']).encode('utf-8')
             if 'media' in entity.entities:
-                tweet['img'] = urllib2.urlopen(entity.entities['media'][0]['media_url']).read()
-
+                if entity.entities['media'][0]['type'] == 'photo':
+                    tweet['img'] = urllib2.urlopen(entity.entities['media'][0]['media_url']).read()
+                    if 'url' in entity.entities['media'][0]:
+                        tweet['text'] = entity.text.replace(entity.entities['media'][0]['url'], entity.entities['media'][0]['expanded_url']).encode('utf-8')
             else:
                 tweet['img'] = ''
             tweet['src'] = 'twitter'
@@ -51,13 +57,14 @@ def user_tweets(name, n):
         pass
     return tweets
 
-def post_tweets(tweets):
-# Send user tweets through post method.
+def post_tweets(tweets, last):
+# Send user tweets through HTTP post method.
     post_status = []
     post_url = url+"/postMsg.php?"
     for tweet in tweets:
-        req = urllib2.Request(post_url, urllib.urlencode(tweet))
-        post_status.append(urllib2.urlopen(req).read()) 
+        if trans_datetime(tweet['ptime']) > trans_datetime(last):
+            req = urllib2.Request(post_url, urllib.urlencode(tweet))
+            post_status.append(urllib2.urlopen(req).read()) 
     return post_status
 
 def crawl_tweets():
@@ -69,13 +76,13 @@ def crawl_tweets():
     if results:
         for result in results:
             if check_new(result['last'], result['name']):
-                print '%s has new tweets posted!' % result['name']
-                post_status = post_tweets(user_tweets(result['name'], 20))
+                print '%s has NEW tweets posted!' % result['name']
+                post_status = post_tweets(user_tweets(result['name'], 20), result['last'])
                 print post_status
                 post_statuses.append(post_status)
-                sleep(15)
             else:
-                print '%s has no new tweets posted!' % result['name']
+                print '%s has no tweets posted!' % result['name']
+            sleep(15)
     return post_statuses
     
 
@@ -90,8 +97,9 @@ if __name__=="__main__":
         i = 0
         while 1:
             i += 1
+            print "Crawl tweets %d time!" % i
             crawl_tweets()
-            print "Crawl tweets %d time!" %i
+            print 'Crawl sleeping...'
             sleep(60*30)
     except:
-        print "Crawl stop!"
+        print "Crawl stops!"
