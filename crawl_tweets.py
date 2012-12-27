@@ -34,28 +34,32 @@ def user_tweets(name, n):
         user = tweepy.api.get_user(name)
     except:
         print 'Fail to identify the user %s!' % name
-    try:
-        for entity in user.timeline(count=n, include_entities=True):
+    for entity in user.timeline(count=n, include_entities=True, include_rts=True):
+        try:
             tweet = {}
             tweet['secret'] = secret
             tweet['name'] = name
             tweet['id'] = str(entity.id)
             tweet['ptime'] = entity.created_at.strftime("%Y-%m-%d %H:%M:%S")
             tweet['text'] = entity.text.encode('utf-8')
-            if entity.entities['urls']:
-                tweet['text'] = tweet['text'].replace(entity.entities['urls'][0]['url'], entity.entities['urls'][0]['expanded_url']).encode('utf-8')
             if 'media' in entity.entities:
-                if entity.entities['media'][0]['type'] == 'photo':
-                    tweet['img'] = urllib2.urlopen(entity.entities['media'][0]['media_url']).read()
-                    if 'url' in entity.entities['media'][0]:
-                        tweet['text'] = tweet['text'].replace(entity.entities['media'][0]['url'], entity.entities['media'][0]['expanded_url']).encode('utf-8')
+                #if entity.entities['media'][0]['type'] == 'photo':
+                tweet['img'] = urllib2.urlopen(entity.entities['media'][0]['media_url']).read()
+                if 'url' in entity.entities['media'][0]:
+                    tweet['text'] = entity.text.replace(entity.entities['media'][0]['url'], entity.entities['media'][0]['expanded_url']).encode('utf-8')
             else:
                 tweet['img'] = ''
+            if entity.entities['urls']:
+                for i in range(len(entity.entities['urls'])):
+                    tweet['text'] = entity.text.replace(entity.entities['urls'][i]['url'], entity.entities['urls'][i]['expanded_url']).encode('utf-8')
+                #tweet['img'] = ''
+            #else:
+            #    tweet['img'] = ''
             tweet['src'] = 'twitter'
             tweet['type'] = str(int(entity.retweeted))
             tweets.append(tweet)
-    except:
-        pass
+        except:
+            pass
     return tweets
 
 def post_tweets(tweets, last):
@@ -82,7 +86,7 @@ def crawl_tweets():
                 print post_status
                 post_statuses.append(post_status)
             else:
-                print '%s has no tweets posted!' % result['name']
+                print '%s has no tweets posted...' % result['name']
             sleep(15)
     return post_statuses
     
